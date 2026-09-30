@@ -1,5 +1,5 @@
 {
-  "name": "adversarial_testing_toolio_examples",
+  "name": "adversarial_testing_tool_io_examples",
   "version": "1.0.0",
   "description": "Safety and adversarial evaluation examples",
   "scripts": {

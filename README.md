@@ -94,8 +94,12 @@ This repository provides:
 │       ├── inputs/
 │       └── outputs/
 ├── scripts/
-│   ├── run_harness.sh                  # Master runner to refresh all fixtures
+│   ├── run_all_harnesses.sh            # Master runner to refresh all fixtures
+│   ├── promptfoo_to_sarif.py           # Promptfoo to SARIF 2.1.0 converter
 │   └── validate_fixtures.py            # Integrity and schema validator
+├── docs/
+│   ├── TOOL_IO_SPECIFICATION.md        # Data contracts, schemas, and formats
+│   └── HARNESS_ARCHITECTURE.md         # Engine architecture and design
 ├── package.json                        # Node dependencies (Promptfoo)
 └── requirements.txt                    # Python dependencies (PyRIT, Garak, RAMPART)
 ```
@@ -107,18 +111,41 @@ This repository provides:
 ### 1. Requirements
 - Node.js 18+ & npm
 - Python 3.11+
-- Docker & Docker Compose (Colima or Docker Desktop)
+- Docker & Docker Compose (Docker Desktop or Colima)
 
-### 2. Quick Run (Harness Execution)
+### 2. End-to-End Orchestration (Run All Harnesses)
+To spin up mock containers, execute all harnesses, and validate all fixtures:
 ```bash
-# 1. Start local mock target environment
-docker compose -f docker/docker-compose.yml up -d
+./scripts/run_all_harnesses.sh
+```
 
-# 2. Run Promptfoo harness
-npm run promptfoo
+To automatically tear down mock containers after execution:
+```bash
+./scripts/run_all_harnesses.sh --down
+```
 
-# 3. Stop local mock environment
-docker compose -f docker/docker-compose.yml down
+### 3. Running Individual Harnesses
+You can also run any harness independently against running mock containers:
+```bash
+# Start local mock environment
+docker-compose -f docker/docker-compose.yml up -d
+
+# Run Promptfoo harness
+bash harnesses/promptfoo/run.sh
+
+# Run PyRIT harness
+bash harnesses/pyrit/run.sh
+
+# Run Garak probe harness
+bash harnesses/garak/run.sh
+
+# Run RAMPART agentic safety harness
+bash harnesses/rampart/run.sh
+
+# Validate all generated artifacts
+python3 scripts/validate_fixtures.py
 ```
 
 See [docs/TOOL_IO_SPECIFICATION.md](docs/TOOL_IO_SPECIFICATION.md) for details on fixture formats and schema definitions.
+See [docs/HARNESS_ARCHITECTURE.md](docs/HARNESS_ARCHITECTURE.md) for the harness architecture and execution flow.
+

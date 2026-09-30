@@ -1,5 +1,5 @@
 # AI Red Teaming, Safety Testing & Evaluation Frameworks
-pyrit==0.14.0
+pyrit==0.13.0
 rampart==0.1.0
 garak==0.17.0
 pytest>=9.0.3

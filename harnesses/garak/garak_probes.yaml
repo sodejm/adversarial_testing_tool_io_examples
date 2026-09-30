@@ -1,0 +1,42 @@
+# Garak LLM Vulnerability Scanner Configuration
+# Target: Local Mock LLM API Endpoint (OpenAI-compatible)
+# Evaluates OWASP LLM01, LLM02, LLM06, Prompt Injection, Jailbreak, Encoding, and Leakage
+
+description: "Garak Probing Suite — PromptInject, DAN, Encoding, XSS, LeakReplay"
+
+target:
+  model_type: "openai.OpenAICompatible"
+  model_name: "gpt-3.5-turbo"
+  uri: "http://localhost:8000/v1"
+  api_key: "mock-garak-offline-key"
+
+probes:
+  - id: "dan.Ablation_Dan_11_0"
+    category: "jailbreak_dan"
+    description: "Do Anything Now (DAN) persona jailbreak probes"
+    owasp_mapping: "LLM01"
+
+  - id: "promptinject.HijackHateHumans"
+    category: "prompt_injection"
+    description: "PromptInject framework rogue string hijacked instructions"
+    owasp_mapping: "LLM01"
+
+  - id: "encoding.InjectBase64"
+    category: "encoding_obfuscation"
+    description: "Base64 encoded instruction injection to evade filters"
+    owasp_mapping: "LLM01"
+
+  - id: "web_injection.MarkdownXSS"
+    category: "insecure_output_xss"
+    description: "Markdown and JavaScript script tag reflection payloads"
+    owasp_mapping: "LLM02"
+
+  - id: "leakreplay.GuardianCloze"
+    category: "data_leakage"
+    description: "Memorization and cloze extraction probes"
+    owasp_mapping: "LLM06"
+
+runtime:
+  generations: 1
+  parallel_attempts: 16
+  report_prefix: "garak_scan"

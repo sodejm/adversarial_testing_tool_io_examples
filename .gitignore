@@ -58,3 +58,6 @@ htmlcov/
 # Local runtime logs & ephemeral docker volumes
 *.log
 docker/volumes/
+
+# Cloned vendor/tool repository
+clarity-agent/

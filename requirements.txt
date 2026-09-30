@@ -1,4 +1,7 @@
-# AI Red Teaming & Safety Testing Frameworks
-pyrit
-rampart
-garak
+# AI Red Teaming, Safety Testing & Evaluation Frameworks
+pyrit==0.14.0
+rampart==0.1.0
+garak==0.17.0
+pytest>=9.0.3
+pytest-asyncio>=1.3.0
+clarity-agent @ git+https://github.com/microsoft/clarity-agent.git

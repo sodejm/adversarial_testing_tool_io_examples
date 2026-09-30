@@ -1,0 +1,42 @@
+services:
+  mock-llm-api:
+    build:
+      context: ./mock-llm-api
+      dockerfile: Dockerfile
+    container_name: mock-llm-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mock-llm-api/app.py:/app/app.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - adversarial-net
+
+  mock-mcp-server:
+    build:
+      context: ./mock-mcp-server
+      dockerfile: Dockerfile
+    container_name: mock-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mock-mcp-server/server.py:/app/server.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - adversarial-net
+
+networks:
+  adversarial-net:
+    driver: bridge

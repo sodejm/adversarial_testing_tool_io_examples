@@ -1,0 +1,12 @@
+{
+  "executive_summary": {
+    "overall_rating": "CRITICAL_RISK",
+    "vulnerabilities_found": 4,
+    "tests_conducted": 5,
+    "compliance_breakdown": {
+      "OWASP_LLM_TOP_10": "NON_COMPLIANT",
+      "MITRE_ATLAS": "4 Techniques Demonstrated",
+      "NIST_AI_RMF": "GOVERN_3.2_VIOLATION"
+    }
+  }
+}

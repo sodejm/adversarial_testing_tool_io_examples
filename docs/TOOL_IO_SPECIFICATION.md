@@ -39,7 +39,6 @@ examples/
 │   ├── inputs/
 │   │   └── pyrit_attack_catalog.json
 │   └── outputs/
-│       ├── pyrit_attack_catalog.json (synced)
 │       ├── pyrit_crescendo_session.json
 │       ├── pyrit_eval_results.json
 │       └── pyrit_memory.db
@@ -50,12 +49,25 @@ examples/
 │       ├── garak_report.html
 │       ├── garak_scan.hitlog.jsonl
 │       └── garak_scan.report.jsonl
-└── rampart/
+├── rampart/
+│   ├── inputs/
+│   │   └── test_agentic_safety.py
+│   └── outputs/
+│       ├── rampart_eval.json
+│       └── rampart_results.xml
+├── inspect_ai/
+│   ├── inputs/
+│   │   └── agent_safety_task.yaml
+│   └── outputs/
+│       ├── agent_safety_task.eval
+│       └── agent_safety_task.eval.json
+└── deepteam/
     ├── inputs/
-    │   └── test_agentic_safety.py
+    │   └── deepteam_config.yaml
     └── outputs/
-        ├── rampart_eval.json
-        └── rampart_results.xml
+        ├── deepteam_vulnerability_matrix.json
+        ├── deepteam_attack_trees.json
+        └── deepteam_risk_scorecard.json
 ```
 
 ---
@@ -283,36 +295,112 @@ RAMPART (Risk Assessment & Measurement Platform for Agentic Red Teaming) is Micr
 
 ---
 
-## 7. Downstream Consumption Guide
+## 7. Inspect AI (UK AI Safety Institute) Tool I/O
 
-### Consuming in Python:
+Inspect AI is the standard platform developed by the UK and US AI Safety Institutes for evaluating frontier models and autonomous agents.
+
+### Inputs
+- **`examples/inspect_ai/inputs/agent_safety_task.yaml`**: Declarative definition of an agent evaluation task, containing:
+  - `task_name`: Evaluation suite identifier.
+  - `target_model`: Model configuration and base URL.
+  - `threat_coverage`: Mapping to OWASP LLM01, LLM06, ASI02, ASI05, ASI06.
+  - `metrics`: Scoring functions (e.g. `mean_safety_score`, `attack_success_rate`).
+
+### Outputs
+- **`examples/inspect_ai/outputs/agent_safety_task.eval`**: The authentic Inspect AI container archive. This is a standard Zip container bundling:
+  - `_eval.json`: Execution metadata, timestamps, and parameters.
+  - `results.json`: Summary scores and metrics.
+  - `samples.json`: Complete turn-by-turn agent transcripts, tool invocations, scores, and grader feedback per sample.
+- **`examples/inspect_ai/outputs/agent_safety_task.eval.json`**: Unpacked evaluation log containing the complete run status, solver steps, and metric aggregates.
+
+---
+
+## 8. DeepTeam / DeepEval Tool I/O
+
+DeepTeam (Confident AI) provides automated adversarial red-teaming directly mapped to standard risk taxonomies.
+
+### Inputs
+- **`examples/deepteam/inputs/deepteam_config.yaml`**: Multi-turn attack configuration declaring targets, taxonomies (`OWASP_LLM_TOP_10`, `MITRE_ATLAS`, `NIST_AI_RMF`), and scenario definitions.
+
+### Outputs
+- **`examples/deepteam/outputs/deepteam_vulnerability_matrix.json`**: Comprehensive mapping of discovered vulnerabilities across OWASP and MITRE ATLAS threat matrices.
+- **`examples/deepteam/outputs/deepteam_attack_trees.json`**: Iterative mutation trees showing how adversarial prompts adapt across turns and branches.
+- **`examples/deepteam/outputs/deepteam_risk_scorecard.json`**: High-level risk score, compliance readiness indicators, and remediation suggestions.
+
+---
+
+## 9. Unified Downstream Parser SDK (`sdk/adversarial_toolio/`)
+
+To eliminate the need for downstream developers to maintain separate parsers for each tool, this repository provides a lightweight Python SDK.
+
+### Data Models
+- **`Finding`**: Standardized finding schema:
+  - `tool`: `ToolType` (Promptfoo, PyRIT, Garak, RAMPART, Inspect AI, DeepTeam).
+  - `threat_id`: Normalized threat identifier (e.g., `LLM01`, `LLM06`, `ASI02`, `ASI05`, `ASI06`).
+  - `category`: `ThreatCategory` enum (Prompt Injection, Data Leakage, Auth Bypass, etc.).
+  - `name`: Descriptive scenario name.
+  - `passed`: Boolean pass/fail indicator.
+  - `severity`: Standardized severity level (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`).
+  - `input`: Original attack prompt or input specification.
+  - `output`: System response or tool call payload.
+  - `details`: Tool-specific metadata dictionary.
+- **`UnifiedReport`**: Aggregate report with querying methods (`get_by_tool`, `get_by_category`, `get_vulnerabilities`).
+
+---
+
+## 10. Downstream Consumption Guide
+
+### Unified Python Consumption (Recommended)
+```python
+from adversarial_toolio import load_all_fixtures, ToolType, ThreatCategory
+
+# 1. Load normalized findings across all 6 frameworks
+report = load_all_fixtures()
+
+# 2. Filter vulnerabilities
+vulnerabilities = report.get_vulnerabilities()
+print(f"Total vulnerabilities detected: {len(vulnerabilities)}")
+
+# 3. Filter by threat category
+injections = report.get_by_category(ThreatCategory.PROMPT_INJECTION)
+for inj in injections:
+    print(f"[{inj.tool.value}] {inj.name} -> Passed: {inj.passed}")
+```
+
+### Raw Format Consumption
+
+#### 1. Parsing Promptfoo SARIF
 ```python
 import json
-import sqlite3
 
-# 1. Parsing Promptfoo SARIF
 with open("examples/promptfoo/outputs/promptfoo_report.sarif") as f:
     sarif = json.load(f)
 for finding in sarif["runs"][0]["results"]:
     print(f"Rule: {finding['ruleId']} -> {finding['message']['text']}")
+```
 
-# 2. Querying PyRIT SQLite Memory
+#### 2. Querying PyRIT SQLite Memory
+```python
+import sqlite3
+
 conn = sqlite3.connect("examples/pyrit/outputs/pyrit_memory.db")
 cursor = conn.cursor()
 cursor.execute("SELECT m.role, m.content, s.score_value FROM conversation_messages m JOIN score_entries s ON m.id = s.message_id")
 for role, content, score in cursor.fetchall():
     print(f"[{role}] Score: {score} | {content[:60]}...")
-
-# 3. Parsing RAMPART Agentic Evaluations
-with open("examples/rampart/outputs/rampart_eval.json") as f:
-    rampart_data = json.load(f)
-for category, trials in rampart_data["by_harm_category"].items():
-    print(f"Harm Category: {category} ({len(trials)} trials)")
-    for trial in trials:
-        print(f" - Safe: {trial['safe']}, Summary: {trial['summary']}")
 ```
 
-### Consuming in TypeScript / Node:
+#### 3. Parsing Inspect AI `.eval` Archive
+```python
+import zipfile
+import json
+
+with zipfile.ZipFile("examples/inspect_ai/outputs/agent_safety_task.eval", "r") as z:
+    results = json.loads(z.read("results.json").decode())
+    print("Inspect AI Summary:", results)
+```
+
+#### 4. Consuming in TypeScript / Node
 ```typescript
 import * as fs from 'fs';
 

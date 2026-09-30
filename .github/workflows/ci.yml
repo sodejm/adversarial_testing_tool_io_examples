@@ -1,0 +1,68 @@
+name: Adversarial Testing Tool I/O CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adversarial-suite-and-validation:
+    name: Run All 6 Harnesses & Validate Tool I/O Fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Node Dependencies
+        run: |
+          npm ci || npm install
+          npm install -g promptfoo@latest
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pydantic pyyaml httpx pytest pytest-asyncio
+
+      - name: Execute All 6 Adversarial Testing Harnesses
+        run: |
+          chmod +x scripts/run_all_harnesses.sh
+          ./scripts/run_all_harnesses.sh --parallel --down
+
+      - name: Validate All 21 Tool I/O Fixtures
+        run: |
+          python scripts/validate_fixtures.py
+
+      - name: Run Unified SDK Tests
+        run: |
+          python sdk/tests/test_sdk.py
+
+      - name: Archive Tool I/O Example Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adversarial-tool-io-examples
+          path: |
+            examples/
+            !examples/**/.gitkeep
+          retention-days: 14

@@ -1,0 +1,38 @@
+# Containerized Adversarial Testing Harness Runner
+# Provides a self-contained execution environment with Python 3.11, Node.js 20,
+# Promptfoo, PyRIT, Garak, RAMPART, Inspect AI, and DeepTeam.
+# Eliminates all host dependencies.
+
+FROM python:3.11-slim-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PROMPTFOO_DISABLE_TELEMETRY=true \
+    PIP_NO_CACHE_DIR=1
+
+# Install baseline OS utilities, Git, SQLite, and Node.js 20.x
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    build-essential \
+    sqlite3 \
+    ca-certificates \
+    gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g promptfoo@latest \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Install Python requirements
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && pip install --no-cache-dir pydantic pyyaml httpx pytest pytest-asyncio
+
+# Default execution runs all 6 harnesses in parallel against containerized targets
+ENTRYPOINT ["/bin/bash"]
+CMD ["./scripts/run_all_harnesses.sh", "--parallel", "--skip-docker"]

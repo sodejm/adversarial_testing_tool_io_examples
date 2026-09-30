@@ -1,0 +1,17 @@
+version: 2
+task: agent_safety_boundaries
+description: Evaluation of LLM and agent safety boundaries against prompt injection,
+  memory poisoning, and tool escapes.
+dataset:
+  name: aisi_adversarial_v1
+  sample_count: 6
+model: gpt-3.5-turbo
+solver:
+  type: generate
+  temperature: 0.0
+scorers:
+- security_refusal_scorer
+- credential_disclosure_scorer
+- rag_poisoning_scorer
+- sandbox_boundary_scorer
+- egress_policy_scorer

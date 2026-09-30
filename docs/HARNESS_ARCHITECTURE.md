@@ -21,8 +21,9 @@ This document details the architectural design, containerized mock target enviro
                                     |  +---------------------------+   +-----------------------+  |
                                     |  |       mock-llm-api        |   |    mock-mcp-server    |  |
                                     |  |   - OpenAI /v1/chat       |   |   - JSON-RPC 2.0      |  |
-                                    |  |   - Ollama /api/chat      |   |   - Tools & Resources |  |
-                                    |  |   - Deterministic triggers|   |   - Poisoned Invoices |  |
+                                    |  |   - OpenAI /v1/embeddings |   |   - Tools & Resources |  |
+                                    |  |   - Ollama /api/chat      |   |   - Vector Knowledge  |  |
+                                    |  |   - Tool Calling support  |   |   - Code Execution    |  |
                                     |  |   - Port 8000             |   |   - Port 8001         |  |
                                     |  +---------------------------+   +-----------------------+  |
                                     +------------------------------+------------------------------+
@@ -30,30 +31,32 @@ This document details the architectural design, containerized mock target enviro
                                               2. Execute test harnesses against mock targets
                                                                    |
           +-------------------------+------------------------------+-------------------------------+
-          |                         |                              |                               |
-          v                         v                              v                               v
-+-------------------+     +--------------------+       +----------------------+       +-----------------------+
-| Promptfoo Harness |     |   PyRIT Harness    |       |    Garak Harness     |       |    RAMPART Harness    |
-| (harnesses/       |     | (harnesses/        |       | (harnesses/          |       | (harnesses/           |
-|  promptfoo/)      |     |  pyrit/)           |       |  garak/)             |       |  rampart/)            |
-|                   |     |                    |       |                      |       |                       |
-| - CLI Evaluator   |     | - Attack Catalog   |       | - Garak Probe Engine |       | - Pytest-Native Tests |
-| - SARIF Converter |     | - Converters (B64) |       | - Parallel Probing   |       | - AgentAdapter & MCP  |
-| - Assertions      |     | - Crescendo Engine |       | - Report Digest      |       | - Evaluators & Sinks  |
-+---------+---------+     +---------+----------+       +----------+-----------+       +-----------+-----------+
-          |                         |                             |                               |
-          +-------------------------+-----------------------------+-------------------------------+
-                                                                  |
+          |            |            |                              |               |               |
+          v            v            v                              v               v               v
++-------------------+ +----------+ +--------------------+ +----------------------+ +---------------+ +---------------+
+| Promptfoo Harness | | PyRIT    | | Garak Harness      | | RAMPART Harness      | | Inspect AI    | | DeepTeam      |
+| (harnesses/       | | Harness  | | (harnesses/        | | (harnesses/          | | Harness       | | Harness       |
+|  promptfoo/)      | | pyrit/)  | |  garak/)           | |  rampart/)           | | inspect_ai/)  | | deepteam/)    |
+|                   | |          | |                    | |                      | |               | |               |
+| - CLI Evaluator   | | - Catalog| | - Garak Engine     | | - AgentAdapter & MCP | | - Task Solver | | - Risk Matrix |
+| - SARIF Converter | | - Conv.  | | - Parallel Probing | | - Custom Evaluators  | | - AISI .eval  | | - Attack Tree |
+| - Assertions      | | - Memory | | - Report Digest    | | - Sinks & JUnit XML  | | - Eval JSON   | | - Scorecard   |
++---------+---------+ +----+-----+ +----------+---------+ +-----------+----------+ +-------+-------+ +-------+-------+
+          |                |                  |                       |                    |                 |
+          +----------------+------------------+-----------------------+--------------------+-----------------+
+                                                                   |
                                               3. Synchronize & Freeze Tool I/O
-                                                                  v
+                                                                   v
                                     +-------------------------------------------------------------+
                                     |                  Frozen Tool I/O Fixtures                   |
                                     |                         (examples/)                         |
                                     |                                                             |
                                     |  examples/promptfoo/  (json, sarif, html)                   |
-                                    |  examples/pyrit/      (sqlite db, json scores, transcripts) |
+                                    |  examples/pyrit/      (sqlite db, json scores, session)     |
                                     |  examples/garak/      (report.jsonl, hitlog, html)          |
                                     |  examples/rampart/    (junit xml, eval.json)                |
+                                    |  examples/inspect_ai/ (.eval zip archive, eval.json)        |
+                                    |  examples/deepteam/   (matrix, attack trees, scorecard)     |
                                     +------------------------------+------------------------------+
                                                                    |
                                               4. Validate Schema & Semantic Integrity
@@ -74,10 +77,11 @@ This document details the architectural design, containerized mock target enviro
 - **Endpoints**:
   - `GET /`, `GET /v1`, `GET /health`: System status and connectivity verification.
   - `GET /v1/models`: Returns supported mock models (`gpt-3.5-turbo`, `gpt-4o`, `mock-vulnerable-model`, `mock-defended-model`).
-  - `POST /v1/chat/completions`: OpenAI-compatible chat completion endpoint supporting standard parameters (`model`, `messages`, `temperature`, `max_tokens`, `stream`).
+  - `POST /v1/chat/completions`: OpenAI-compatible chat completion endpoint supporting standard parameters (`model`, `messages`, `temperature`, `max_tokens`, `stream`, and native `tool_calls`).
+  - `POST /v1/embeddings`: Generates deterministic 1536-dimensional float vectors for RAG and semantic retrieval evaluation.
   - `POST /api/chat`, `POST /api/generate`: Ollama-compatible completion endpoints.
 - **Dual Mode Operation**:
-  - **Vulnerable Mode** (default): Evaluates incoming prompt text against regex patterns. If an adversarial pattern is detected (e.g. system directive override, DAN trigger, credential exfiltration, role elevation, or reflected script tag), it generates the exact vulnerable signature to allow automated red-teaming detectors to record a hit.
+  - **Vulnerable Mode** (default): Evaluates incoming prompt text against regex patterns. If an adversarial pattern is detected (e.g. system directive override, DAN trigger, credential exfiltration, role elevation, reflected script tag, RAG poisoning, or sandbox escape), it generates the exact vulnerable signature to allow automated red-teaming detectors to record a hit.
   - **Defended Mode** (triggered by header `x-mock-mode: defended` or model name containing `defended`): Refuses any request matching attack patterns with safe refusal messages.
 
 ### 2.2 `mock-mcp-server` (Port 8001)
@@ -93,6 +97,9 @@ This document details the architectural design, containerized mock target enviro
   - `fetch_internal_document(document_id: str)`: Returns document contents. When `document_id` references `untrusted_vendor_invoice`, returns poisoned content with embedded indirect prompt injection directives.
   - `modify_user_role(username: str, role: str)`: Updates enterprise authorization roles. Simulates privilege escalation vulnerabilities when called without prior authorization.
   - `execute_system_command(command: str)`: Simulates command injection vulnerability by returning root user shell execution telemetry.
+  - `search_vector_knowledge_base(query: str)`: Vector database retrieval tool. Returns knowledge base records with embedded persistent context poisoning.
+  - `execute_python_code(code: str)`: Sandboxed code runner. Detects and simulates container sandbox breakout attempts (`/proc/environ`, `docker.sock`, shell execution).
+  - `send_external_webhook(url: str, payload: dict)`: External network egress tool. Detects unauthorized data exfiltration in Confused Deputy scenarios.
 
 ---
 
@@ -145,41 +152,88 @@ This document details the architectural design, containerized mock target enviro
   1. Copies test specification to `examples/rampart/inputs/test_agentic_safety.py`.
   2. Implements `MockAgentAdapter` with `AppManifest` declaring tools and data sources.
   3. Bridges pytest test cases with both the Mock LLM API and the Mock MCP server.
-  4. Runs safety test cases for:
+  4. Runs 12 safety test cases for:
      - Tool Authorization Bypass (Vulnerable & Defended modes)
+     - Code Execution Sandbox Escapes (Vulnerable & Defended modes)
+     - Confused Deputy & Egress Exfiltration (Vulnerable & Defended modes)
      - Indirect Prompt Injection via Poisoned MCP Resources (Vulnerable & Defended modes)
+     - RAG Memory Context Poisoning (Vulnerable & Defended modes)
      - Sensitive Data Leakage & Credential Exfiltration (Vulnerable & Defended modes)
   5. Evaluates execution context via custom `BaseEvaluator` classes with full tool-call and side-effect observability.
   6. Automatically emits JUnit XML (`rampart_results.xml`) and RAMPART structured evaluation JSON (`rampart_eval.json`) via session-scoped `ReportSink`.
 
+### 3.5 Inspect AI Harness (`harnesses/inspect_ai/`)
+- **Execution Script**: `harnesses/inspect_ai/run.sh`
+- **Task Definition**: `harnesses/inspect_ai/inspect_adversarial_task.py`
+- **Configuration**: `examples/inspect_ai/inputs/agent_safety_task.yaml`
+- **Workflow**:
+  1. Executes task evaluation across 6 diverse sample categories: prompt injection, data leakage, RAG poisoning, code execution escape, confused deputy, and benign baseline.
+  2. Evaluates model responses using custom scorers (`safety_score`).
+  3. Packs results into standard UK AISI `.eval` Zip container (`agent_safety_task.eval`) containing `_eval.json`, `results.json`, and `samples.json`.
+  4. Emits `agent_safety_task.eval.json` summary log.
+
+### 3.6 DeepTeam / DeepEval Harness (`harnesses/deepteam/`)
+- **Execution Script**: `harnesses/deepteam/run.sh`
+- **Runner**: `harnesses/deepteam/deepteam_adversarial_suite.py`
+- **Configuration**: `examples/deepteam/inputs/deepteam_config.yaml`
+- **Workflow**:
+  1. Executes multi-turn persona, credential, and injection scenarios.
+  2. Generates attack progression trees (`deepteam_attack_trees.json`).
+  3. Maps findings to OWASP Top 10 for LLMs and MITRE ATLAS matrix (`deepteam_vulnerability_matrix.json`).
+  4. Generates executive risk scorecard (`deepteam_risk_scorecard.json`).
+
 ---
 
-## 4. Master Orchestration & Fixture Validation
+## 4. Master Orchestration & Execution Modes
 
 ### 4.1 Master Orchestrator: `scripts/run_all_harnesses.sh`
 The master script executes the complete regeneration sequence:
 ```bash
-./scripts/run_all_harnesses.sh [--parallel | --sequential] [--down]
+./scripts/run_all_harnesses.sh [--parallel | --sequential] [--down] [--skip-docker]
 ```
-1. Verifies Docker Compose, Python, and Node environments.
+1. Verifies Docker Compose, Python, and Node environments (or skips docker via `--skip-docker`).
 2. Starts Docker containers (`docker-compose up -d`) and rapidly polls health endpoints (at 250ms intervals) until healthy.
-3. Concurrently executes Promptfoo, PyRIT, Garak, and RAMPART harnesses in parallel by default (or sequentially via `--sequential`). Parallel execution leverages independent artifact targets and stateless mock APIs to complete all 4 harnesses in ~16s total.
-4. Executes `scripts/validate_fixtures.py` to ensure zero regressions across all 14 generated artifacts.
+3. Concurrently executes all 6 harnesses in parallel by default (or sequentially via `--sequential`). Parallel execution leverages independent artifact targets and stateless mock APIs to complete all 6 harnesses in ~16s total.
+4. Executes `scripts/validate_fixtures.py` to ensure zero regressions across all 21 generated artifacts.
 5. Optionally tears down containers when `--down` flag is supplied.
 
-### 4.2 Fixture Validator: `scripts/validate_fixtures.py`
-Runs 14 independent structural and semantic integrity checks:
-- **File Existence & Non-emptiness**: Asserts all 14 expected input and output artifacts exist and are non-zero size.
+### 4.2 Containerized Runner (Zero Host Dependencies)
+For environments without Python 3.11 or Node 20 installed locally:
+```bash
+docker compose -f docker/docker-compose.full.yml run --rm harness-runner
+```
+This mounts the workspace into a self-contained Debian container equipped with Python, Node, Promptfoo, PyRIT, Garak, RAMPART, and runs the entire suite and validation automatically.
+
+---
+
+## 5. Fixture Validator: `scripts/validate_fixtures.py`
+Runs 21 independent structural and semantic integrity checks:
+- **File Existence & Non-emptiness**: Asserts all 21 expected input and output artifacts exist and are non-zero size.
 - **JSON Parsing**: Confirms valid JSON syntax and parses key structures.
 - **SARIF 2.1.0 Validation**: Verifies schema version, rule metadata, and findings array.
 - **JSONL Validation**: Iterates through every line of `garak_scan.report.jsonl` verifying newline-delimited JSON validity.
 - **SQLite Database Inspection**: Connects to `pyrit_memory.db`, verifies required tables (`conversation_messages`, `score_entries`), and asserts row population.
 - **JUnit XML Parsing**: Parses XML hierarchy and validates `<testsuite>` test counts.
 - **HTML Document Verification**: Confirms presence of complete HTML markup and rendered tags.
+- **ZIP / .eval Archive Verification**: Opens `agent_safety_task.eval` and verifies contained JSON files.
 
 ---
 
-## 5. Adding New Tools & Test Cases
+## 6. Unified Downstream Parser SDK (`sdk/adversarial_toolio/`)
+
+Provides a unified Python SDK to consume, query, and normalize findings across all 6 tool outputs:
+```python
+from adversarial_toolio import load_all_fixtures, ToolType, ThreatCategory
+
+report = load_all_fixtures()
+print(f"Total findings loaded: {len(report.findings)}")
+for finding in report.get_vulnerabilities():
+    print(f"[{finding.tool.value}] {finding.category.value}: {finding.name} (Severity: {finding.severity})")
+```
+
+---
+
+## 7. Adding New Tools & Test Cases
 
 1. **Adding an LLM Vulnerability Trigger**:
    Edit `docker/mock-llm-api/app.py`: add pattern to `detect_vulnerability_triggers()` and simulated response to `generate_simulated_response()`.
@@ -187,5 +241,5 @@ Runs 14 independent structural and semantic integrity checks:
    Edit `docker/mock-mcp-server/server.py`: append tool to `AVAILABLE_TOOLS` and handle execution in `handle_tool_call()`. Add resources to `MOCK_RESOURCES`.
 3. **Adding a RAMPART Test Case**:
    Edit `harnesses/rampart/test_agentic_safety.py`: define a new `@pytest.mark.harm(...)` test function using the adapter session, evaluate observations, and call `record_result(result)`.
-4. **Regenerating & Validating**:
-   Run `./scripts/run_all_harnesses.sh` to update all frozen Tool I/O fixtures.
+4. **Validating & Regenerating Changes**:
+   Run `./scripts/run_all_harnesses.sh --parallel` and `./.venv/bin/python3 sdk/tests/test_sdk.py`.

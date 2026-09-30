@@ -42,6 +42,17 @@ EXPECTED_FILES = [
     ("rampart/inputs/test_agentic_safety.py", "python"),
     ("rampart/outputs/rampart_results.xml", "xml"),
     ("rampart/outputs/rampart_eval.json", "json"),
+
+    # Inspect AI (UK AISI)
+    ("inspect_ai/inputs/agent_safety_task.yaml", "yaml"),
+    ("inspect_ai/outputs/agent_safety_task.eval.json", "json"),
+    ("inspect_ai/outputs/agent_safety_task.eval", "zip"),
+
+    # DeepTeam / DeepEval
+    ("deepteam/inputs/deepteam_config.yaml", "yaml"),
+    ("deepteam/outputs/deepteam_vulnerability_matrix.json", "json"),
+    ("deepteam/outputs/deepteam_attack_trees.json", "json"),
+    ("deepteam/outputs/deepteam_risk_scorecard.json", "json"),
 ]
 
 def check_file_exists(rel_path: str) -> Tuple[bool, str]:
@@ -129,6 +140,17 @@ def validate_xml(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"XML validation failed: {e}"
 
+def validate_zip(path: Path) -> Tuple[bool, str]:
+    import zipfile
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            namelist = zf.namelist()
+            if not namelist:
+                return False, f"Empty ZIP archive: {path.name}"
+            return True, f"Valid archive ({len(namelist)} items: {', '.join(namelist[:3])})"
+    except Exception as e:
+        return False, f"ZIP validation failed: {e}"
+
 def validate_html(path: Path) -> Tuple[bool, str]:
     try:
         content = path.read_text(encoding="utf-8")
@@ -172,6 +194,8 @@ def validate_all() -> bool:
             valid, detail = validate_xml(full_path)
         elif file_type == "html":
             valid, detail = validate_html(full_path)
+        elif file_type == "zip":
+            valid, detail = validate_zip(full_path)
         elif file_type in ("yaml", "python"):
             valid = True
             detail = f"Present and readable ({full_path.stat().st_size:,} bytes)"

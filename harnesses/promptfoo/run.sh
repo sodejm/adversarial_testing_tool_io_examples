@@ -17,14 +17,26 @@ cp "${SCRIPT_DIR}/promptfooconfig.yaml" "${REPO_ROOT}/examples/promptfoo/inputs/
 
 cd "${SCRIPT_DIR}"
 
+CONFIG_FILE="${SCRIPT_DIR}/promptfooconfig.yaml"
+RUNTIME_CONFIG=false
+if [ -n "${PROMPTFOO_TARGET_URL:-}" ] && [ "${PROMPTFOO_TARGET_URL}" != "http://localhost:8000/v1" ]; then
+  CONFIG_FILE="${SCRIPT_DIR}/.promptfooconfig.runtime.yaml"
+  sed "s|http://localhost:8000/v1|${PROMPTFOO_TARGET_URL}|g" "${SCRIPT_DIR}/promptfooconfig.yaml" > "${CONFIG_FILE}"
+  RUNTIME_CONFIG=true
+fi
+
 echo "Executing promptfoo eval..."
 npx promptfoo eval \
-  --config "${SCRIPT_DIR}/promptfooconfig.yaml" \
+  --config "${CONFIG_FILE}" \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_results.json" \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_summary.html" \
   --no-table \
   --no-progress-bar \
   --max-concurrency 8 || true
+
+if [ "${RUNTIME_CONFIG}" = true ]; then
+  rm -f "${CONFIG_FILE}"
+fi
 
 echo "Generating SARIF report from Promptfoo results..."
 if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then

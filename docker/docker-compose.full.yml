@@ -1,0 +1,72 @@
+services:
+  mock-llm-api:
+    build:
+      context: ./mock-llm-api
+      dockerfile: Dockerfile
+    container_name: mock-llm-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mock-llm-api/app.py:/app/app.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    networks:
+      - adversarial-net
+
+  mock-mcp-server:
+    build:
+      context: ./mock-mcp-server
+      dockerfile: Dockerfile
+    container_name: mock-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mock-mcp-server/server.py:/app/server.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    networks:
+      - adversarial-net
+
+  harness-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.harness-runner
+    container_name: adversarial-harness-runner
+    volumes:
+      - ..:/workspace
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MOCK_LLM_HEALTH_URL=http://mock-llm-api:8000/health
+      - MOCK_MCP_HEALTH_URL=http://mock-mcp-server:8001/health
+      - PROMPTFOO_TARGET_URL=http://mock-llm-api:8000/v1
+      - PYRIT_TARGET_URL=http://mock-llm-api:8000/v1
+      - GARAK_TARGET_URL=http://mock-llm-api:8000/v1
+      - RAMPART_TARGET_LLM_URL=http://mock-llm-api:8000/v1
+      - RAMPART_TARGET_MCP_URL=http://mock-mcp-server:8001/mcp
+      - INSPECT_TARGET_URL=http://mock-llm-api:8000/v1
+      - DEEPTEAM_TARGET_URL=http://mock-llm-api:8000/v1
+      - OPENAI_BASE_URL=http://mock-llm-api:8000/v1
+      - OPENAI_API_KEY=mock-adversarial-key
+      - PROMPTFOO_DISABLE_TELEMETRY=true
+      - PROMPTFOO_CONFIG_DIR=/workspace/.promptfoo
+    depends_on:
+      mock-llm-api:
+        condition: service_healthy
+      mock-mcp-server:
+        condition: service_healthy
+    networks:
+      - adversarial-net
+
+networks:
+  adversarial-net:
+    driver: bridge

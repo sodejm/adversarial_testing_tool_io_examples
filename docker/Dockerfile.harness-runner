@@ -1,9 +1,9 @@
 # Containerized Adversarial Testing Harness Runner
-# Provides a self-contained execution environment with Python 3.11, Node.js 22,
+# Provides a self-contained execution environment with Python 3.12, Node.js 22,
 # Promptfoo, PyRIT, Garak, RAMPART, Inspect AI, and DeepTeam.
 # Eliminates all host dependencies.
 
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \

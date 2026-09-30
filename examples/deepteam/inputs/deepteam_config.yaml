@@ -2,7 +2,7 @@ framework: DeepTeam-DeepEval
 version: 1.4.2
 target:
   model: gpt-3.5-turbo
-  api_base: http://localhost:8000/v1
+  api_base: http://mock-llm-api:8000/v1
   temperature: 0.0
 taxonomies:
 - OWASP_LLM_TOP_10

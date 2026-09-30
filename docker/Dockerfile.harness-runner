@@ -9,9 +9,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     IN_CONTAINER=1 \
     PROMPTFOO_DISABLE_TELEMETRY=true \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/root/.cargo/bin:${PATH}"
 
-# Install baseline OS utilities, Git, SQLite, Rust/Cargo (for pyrit deps), and Node.js 22.x
+# Install baseline OS utilities, Git, SQLite, and Node.js 22.x
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
@@ -19,8 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     ca-certificates \
     gnupg \
-    cargo \
-    rustc \
     pkg-config \
     libssl-dev \
     && mkdir -p /etc/apt/keyrings \
@@ -29,15 +28,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g promptfoo@latest \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# Install Python requirements (including packages requiring rust compiler like base2048)
+# Install Python requirements (using rustup for pyrit's base2048 dependency)
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
-    && pip install --no-cache-dir pydantic pyyaml httpx pytest pytest-asyncio
+    && pip install --no-cache-dir pydantic pyyaml httpx pytest pytest-asyncio \
+    && rm -rf /root/.cargo /root/.rustup
 
 # Default execution runs all harnesses in parallel against containerized targets
 ENTRYPOINT ["/bin/bash"]

@@ -16,12 +16,26 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+PARALLEL_MODE=true
 DOWN_ON_FINISH=false
+
 for arg in "$@"; do
   case $arg in
     --down)
       DOWN_ON_FINISH=true
-      shift
+      ;;
+    --sequential)
+      PARALLEL_MODE=false
+      ;;
+    --parallel)
+      PARALLEL_MODE=true
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--parallel | --sequential] [--down]"
+      echo "  --parallel    Run all 4 harnesses concurrently (default, fastest)"
+      echo "  --sequential  Run harnesses sequentially one after another"
+      echo "  --down        Tear down docker mock containers when complete"
+      exit 0
       ;;
   esac
 done
@@ -41,24 +55,30 @@ echo " Starting Master Adversarial Testing Orchestrator"
 echo "========================================================================"
 echo "Docker Compose Engine: ${DOCKER_COMPOSE}"
 echo "Repository Root:       ${REPO_ROOT}"
+echo "Execution Mode:        $([ "${PARALLEL_MODE}" = true ] && echo "Parallel (Fastest)" || echo "Sequential")"
 
-# Teardown handler if requested
+# Teardown handler
 cleanup() {
+  local jobs_list
+  jobs_list=$(jobs -p) || true
+  if [ -n "${jobs_list}" ]; then
+    kill ${jobs_list} 2>/dev/null || true
+  fi
   if [ "${DOWN_ON_FINISH}" = true ]; then
     echo ""
     echo "Tearing down mock Docker environment..."
     ${DOCKER_COMPOSE} -f "${REPO_ROOT}/docker/docker-compose.yml" down
   fi
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 # 1. Start Docker Mock Services
 echo ""
-echo "[1/6] Launching local mock target environment..."
+echo "[1/3] Launching local mock target environment..."
 ${DOCKER_COMPOSE} -f "${REPO_ROOT}/docker/docker-compose.yml" up -d
 
 echo "Waiting for services to become healthy..."
-RETRIES=30
+RETRIES=120
 until curl -s http://localhost:8000/health >/dev/null && curl -s http://localhost:8001/health >/dev/null; do
   RETRIES=$((RETRIES - 1))
   if [ $RETRIES -le 0 ]; then
@@ -66,35 +86,101 @@ until curl -s http://localhost:8000/health >/dev/null && curl -s http://localhos
     ${DOCKER_COMPOSE} -f "${REPO_ROOT}/docker/docker-compose.yml" logs
     exit 1
   fi
-  sleep 1
+  sleep 0.25
 done
 echo "Mock targets ready:"
 echo " - Mock LLM API:    http://localhost:8000/v1"
 echo " - Mock MCP Server: http://localhost:8001/mcp"
 
-# 2. Run Promptfoo Harness
-echo ""
-echo "[2/6] Executing Promptfoo Harness..."
-bash "${REPO_ROOT}/harnesses/promptfoo/run.sh"
+# 2. Run Harnesses
+if [ "${PARALLEL_MODE}" = true ]; then
+  echo ""
+  echo "[2/3] Executing all harnesses in parallel (Promptfoo, PyRIT, Garak, RAMPART)..."
+  LOGS_DIR="${REPO_ROOT}/.logs"
+  mkdir -p "${LOGS_DIR}"
 
-# 3. Run PyRIT Harness
-echo ""
-echo "[3/6] Executing PyRIT Harness..."
-bash "${REPO_ROOT}/harnesses/pyrit/run.sh"
+  START_TIME=$(date +%s)
 
-# 4. Run Garak Harness
-echo ""
-echo "[4/6] Executing Garak Probing Harness..."
-bash "${REPO_ROOT}/harnesses/garak/run.sh"
+  bash "${REPO_ROOT}/harnesses/promptfoo/run.sh" > "${LOGS_DIR}/promptfoo.log" 2>&1 &
+  PID_PROMPTFOO=$!
 
-# 5. Run RAMPART Harness
-echo ""
-echo "[5/6] Executing RAMPART Agentic Safety Harness..."
-bash "${REPO_ROOT}/harnesses/rampart/run.sh"
+  bash "${REPO_ROOT}/harnesses/pyrit/run.sh" > "${LOGS_DIR}/pyrit.log" 2>&1 &
+  PID_PYRIT=$!
 
-# 6. Validate All Generated Fixtures
+  bash "${REPO_ROOT}/harnesses/garak/run.sh" > "${LOGS_DIR}/garak.log" 2>&1 &
+  PID_GARAK=$!
+
+  bash "${REPO_ROOT}/harnesses/rampart/run.sh" > "${LOGS_DIR}/rampart.log" 2>&1 &
+  PID_RAMPART=$!
+
+  FAILED=false
+
+  # Wait for Promptfoo
+  if wait "${PID_PROMPTFOO}"; then
+    echo "  ✅ [Promptfoo] Harness completed successfully."
+  else
+    echo "  ❌ [Promptfoo] Harness failed! Check ${LOGS_DIR}/promptfoo.log" >&2
+    cat "${LOGS_DIR}/promptfoo.log" >&2
+    FAILED=true
+  fi
+
+  # Wait for PyRIT
+  if wait "${PID_PYRIT}"; then
+    echo "  ✅ [PyRIT] Harness completed successfully."
+  else
+    echo "  ❌ [PyRIT] Harness failed! Check ${LOGS_DIR}/pyrit.log" >&2
+    cat "${LOGS_DIR}/pyrit.log" >&2
+    FAILED=true
+  fi
+
+  # Wait for Garak
+  if wait "${PID_GARAK}"; then
+    echo "  ✅ [Garak] Harness completed successfully."
+  else
+    echo "  ❌ [Garak] Harness failed! Check ${LOGS_DIR}/garak.log" >&2
+    cat "${LOGS_DIR}/garak.log" >&2
+    FAILED=true
+  fi
+
+  # Wait for RAMPART
+  if wait "${PID_RAMPART}"; then
+    echo "  ✅ [RAMPART] Harness completed successfully."
+  else
+    echo "  ❌ [RAMPART] Harness failed! Check ${LOGS_DIR}/rampart.log" >&2
+    cat "${LOGS_DIR}/rampart.log" >&2
+    FAILED=true
+  fi
+
+  if [ "${FAILED}" = true ]; then
+    echo "Error: One or more harnesses failed during parallel execution." >&2
+    exit 1
+  fi
+
+  ELAPSED=$(( $(date +%s) - START_TIME ))
+  echo "All 4 harnesses finished concurrently in ~${ELAPSED}s."
+
+else
+  # Sequential mode
+  echo ""
+  echo "[2/5] Executing Promptfoo Harness..."
+  bash "${REPO_ROOT}/harnesses/promptfoo/run.sh"
+
+  echo ""
+  echo "[3/5] Executing PyRIT Harness..."
+  bash "${REPO_ROOT}/harnesses/pyrit/run.sh"
+
+  echo ""
+  echo "[4/5] Executing Garak Probing Harness..."
+  bash "${REPO_ROOT}/harnesses/garak/run.sh"
+
+  echo ""
+  echo "[5/5] Executing RAMPART Agentic Safety Harness..."
+  bash "${REPO_ROOT}/harnesses/rampart/run.sh"
+fi
+
+# 3. Validate All Generated Fixtures
 echo ""
-echo "[6/6] Validating All Generated Tool I/O Fixtures..."
+echo "[3/3] Validating All Generated Tool I/O Fixtures..."
 if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"

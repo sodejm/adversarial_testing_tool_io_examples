@@ -57,6 +57,7 @@ htmlcov/
 
 # Local runtime logs & ephemeral docker volumes
 *.log
+.logs/
 docker/volumes/
 
 # Cloned vendor/tool repository

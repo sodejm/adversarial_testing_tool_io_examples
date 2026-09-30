@@ -159,12 +159,12 @@ This document details the architectural design, containerized mock target enviro
 ### 4.1 Master Orchestrator: `scripts/run_all_harnesses.sh`
 The master script executes the complete regeneration sequence:
 ```bash
-./scripts/run_all_harnesses.sh [--down]
+./scripts/run_all_harnesses.sh [--parallel | --sequential] [--down]
 ```
 1. Verifies Docker Compose, Python, and Node environments.
-2. Starts Docker containers (`docker-compose up -d`) and polls health endpoints until healthy.
-3. Sequentially executes Promptfoo, PyRIT, Garak, and RAMPART harnesses.
-4. Executes `scripts/validate_fixtures.py` to ensure zero regressions in generated artifacts.
+2. Starts Docker containers (`docker-compose up -d`) and rapidly polls health endpoints (at 250ms intervals) until healthy.
+3. Concurrently executes Promptfoo, PyRIT, Garak, and RAMPART harnesses in parallel by default (or sequentially via `--sequential`). Parallel execution leverages independent artifact targets and stateless mock APIs to complete all 4 harnesses in ~16s total.
+4. Executes `scripts/validate_fixtures.py` to ensure zero regressions across all 14 generated artifacts.
 5. Optionally tears down containers when `--down` flag is supplied.
 
 ### 4.2 Fixture Validator: `scripts/validate_fixtures.py`

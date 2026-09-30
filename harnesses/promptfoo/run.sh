@@ -23,7 +23,8 @@ npx promptfoo eval \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_results.json" \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_summary.html" \
   --no-table \
-  --no-progress-bar || true
+  --no-progress-bar \
+  --max-concurrency 8 || true
 
 echo "Generating SARIF report from Promptfoo results..."
 if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then

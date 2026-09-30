@@ -10,6 +10,7 @@ export GARAK_TARGET_URL="${GARAK_TARGET_URL:-http://localhost:8000/v1}"
 export GARAK_CONFIG="${SCRIPT_DIR}/garak_probes.yaml"
 export GARAK_INPUT_DIR="${REPO_ROOT}/examples/garak/inputs"
 export GARAK_OUTPUT_DIR="${REPO_ROOT}/examples/garak/outputs"
+export OPENAICOMPATIBLE_API_KEY="${OPENAICOMPATIBLE_API_KEY:-mock-garak-offline-key}"
 
 mkdir -p "${GARAK_INPUT_DIR}"
 mkdir -p "${GARAK_OUTPUT_DIR}"

@@ -169,10 +169,11 @@ npm install
 ```
 
 ### 2. Run All Harnesses & Validate (Single Command)
-This spins up the local mock targets, runs Promptfoo, PyRIT, Garak, and RAMPART, and verifies the generated datasets:
+This spins up the local mock targets, runs Promptfoo, PyRIT, Garak, and RAMPART in parallel (~16s), and verifies the generated datasets:
 ```bash
 ./scripts/run_all_harnesses.sh --down
 ```
+> **Tip**: By default, `run_all_harnesses.sh` executes all 4 harnesses concurrently for maximum speed. To run them sequentially for step-by-step console logs, pass `./scripts/run_all_harnesses.sh --sequential`.
 
 ### 3. Run An Individual Tool Harness
 Want to iterate on a single tool? Start the mocks and run its specific harness:

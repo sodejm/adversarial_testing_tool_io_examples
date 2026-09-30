@@ -13,7 +13,7 @@ export DEEPTEAM_OUTPUT_DIR="${REPO_ROOT}/examples/deepteam/outputs"
 mkdir -p "${DEEPTEAM_INPUT_DIR}"
 mkdir -p "${DEEPTEAM_OUTPUT_DIR}"
 
-if [ -f "${REPO_ROOT}/.venv/bin/python3" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/python3" ]; then
   PYTHON_BIN="${REPO_ROOT}/.venv/bin/python3"
 else
   PYTHON_BIN="python3"

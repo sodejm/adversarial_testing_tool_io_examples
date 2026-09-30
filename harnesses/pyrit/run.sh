@@ -13,7 +13,7 @@ export PYRIT_OUTPUT_DIR="${REPO_ROOT}/examples/pyrit/outputs"
 mkdir -p "${PYRIT_INPUT_DIR}"
 mkdir -p "${PYRIT_OUTPUT_DIR}"
 
-if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"
 fi

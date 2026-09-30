@@ -26,7 +26,12 @@ if [ -n "${PROMPTFOO_TARGET_URL:-}" ] && [ "${PROMPTFOO_TARGET_URL}" != "http://
 fi
 
 echo "Executing promptfoo eval..."
-npx promptfoo eval \
+PROMPTFOO_CMD="promptfoo"
+if ! command -v promptfoo &>/dev/null; then
+  PROMPTFOO_CMD="npx promptfoo"
+fi
+
+${PROMPTFOO_CMD} eval \
   --config "${CONFIG_FILE}" \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_results.json" \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_summary.html" \
@@ -39,7 +44,7 @@ if [ "${RUNTIME_CONFIG}" = true ]; then
 fi
 
 echo "Generating SARIF report from Promptfoo results..."
-if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"
 fi

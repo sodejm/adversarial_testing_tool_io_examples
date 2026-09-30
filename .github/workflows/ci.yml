@@ -66,3 +66,26 @@ jobs:
             examples/
             !examples/**/.gitkeep
           retention-days: 14
+
+  containerized-suite-runner:
+    name: Test Containerized Runner (Docker Compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Containerized Harness Suite
+        run: |
+          chmod +x scripts/run_containerized.sh scripts/run_all_harnesses.sh
+          ./scripts/run_containerized.sh --build
+
+      - name: Validate Output Fixture Files Exist
+        run: |
+          test -s examples/promptfoo/outputs/promptfoo_results.json
+          test -s examples/pyrit/outputs/pyrit_eval_results.json
+          test -s examples/garak/outputs/garak_scan.report.jsonl
+          test -s examples/rampart/outputs/rampart_results.xml
+          test -s examples/inspect_ai/outputs/agent_safety_task.eval
+          test -s examples/deepteam/outputs/deepteam_vulnerability_matrix.json
+

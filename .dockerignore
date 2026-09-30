@@ -1,0 +1,14 @@
+.venv/
+venv/
+node_modules/
+.git/
+.promptfoo/
+.pytest_cache/
+.logs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.coverage
+htmlcov/

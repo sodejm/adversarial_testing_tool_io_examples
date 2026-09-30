@@ -15,7 +15,7 @@ export OPENAICOMPATIBLE_API_KEY="${OPENAICOMPATIBLE_API_KEY:-mock-garak-offline-
 mkdir -p "${GARAK_INPUT_DIR}"
 mkdir -p "${GARAK_OUTPUT_DIR}"
 
-if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"
 fi

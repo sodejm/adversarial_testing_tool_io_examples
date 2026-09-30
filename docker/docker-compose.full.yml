@@ -44,7 +44,10 @@ services:
     container_name: adversarial-harness-runner
     volumes:
       - ..:/workspace
+      - /workspace/.venv
+      - /workspace/node_modules
     environment:
+      - IN_CONTAINER=1
       - PYTHONUNBUFFERED=1
       - MOCK_LLM_HEALTH_URL=http://mock-llm-api:8000/health
       - MOCK_MCP_HEALTH_URL=http://mock-mcp-server:8001/health
@@ -59,6 +62,7 @@ services:
       - OPENAI_API_KEY=mock-adversarial-key
       - PROMPTFOO_DISABLE_TELEMETRY=true
       - PROMPTFOO_CONFIG_DIR=/workspace/.promptfoo
+    command: ["./scripts/run_all_harnesses.sh", "${HARNESS_MODE:---parallel}", "--skip-docker"]
     depends_on:
       mock-llm-api:
         condition: service_healthy

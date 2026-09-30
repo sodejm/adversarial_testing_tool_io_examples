@@ -201,11 +201,18 @@ This spins up the local mock targets, runs Promptfoo, PyRIT, Garak, RAMPART, Ins
 > **Tip**: Pass `--sequential` if you wish to run harnesses one after another with verbose sequential console output.
 
 ### 3. Fully Containerized Execution (Zero Host Dependencies)
-Don't want to install Node.js, Python, or tool packages on your host system? Run everything inside isolated Docker containers:
+Don't want to install Node.js, Python, or tool packages on your host system? Run everything inside an isolated, multi-runtime Docker container:
 ```bash
-# Build and run the entire suite in Docker
-docker compose -f docker/docker-compose.full.yml run --rm harness-runner
+# Option A: Single-command turnkey containerized runner
+./scripts/run_containerized.sh
+
+# Option B: Pass --docker to the master harness runner
+./scripts/run_all_harnesses.sh --docker
+
+# Option C: Direct Docker Compose execution
+docker-compose -f docker/docker-compose.full.yml up --abort-on-container-exit --exit-code-from harness-runner
 ```
+> **Note**: Host virtual environments (`.venv`) and `node_modules` are automatically isolated via anonymous container volumes to prevent cross-architecture collisions. Generated outputs in `examples/` are directly mounted and written to your host filesystem.
 
 ### 4. Run An Individual Tool Harness
 Want to iterate on a single tool? Start the mocks and run its specific harness:

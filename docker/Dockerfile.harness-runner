@@ -7,6 +7,7 @@ FROM python:3.11-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
+    IN_CONTAINER=1 \
     PROMPTFOO_DISABLE_TELEMETRY=true \
     PIP_NO_CACHE_DIR=1
 
@@ -33,6 +34,6 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && pip install --no-cache-dir pydantic pyyaml httpx pytest pytest-asyncio
 
-# Default execution runs all 6 harnesses in parallel against containerized targets
+# Default execution runs all harnesses in parallel against containerized targets
 ENTRYPOINT ["/bin/bash"]
 CMD ["./scripts/run_all_harnesses.sh", "--parallel", "--skip-docker"]

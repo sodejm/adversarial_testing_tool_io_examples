@@ -34,12 +34,16 @@ for arg in "$@"; do
     --parallel)
       PARALLEL_MODE=true
       ;;
+    --docker)
+      exec "${REPO_ROOT}/scripts/run_containerized.sh" "$@"
+      ;;
     -h|--help)
-      echo "Usage: $0 [--parallel | --sequential] [--down] [--skip-docker]"
+      echo "Usage: $0 [--parallel | --sequential] [--down] [--skip-docker] [--docker]"
       echo "  --parallel     Run all 6 harnesses concurrently (default, fastest)"
       echo "  --sequential   Run harnesses sequentially one after another"
       echo "  --down         Tear down docker mock containers when complete"
       echo "  --skip-docker  Skip starting/stopping Docker containers (targets assumed running)"
+      echo "  --docker       Run entire suite inside self-contained Docker container (zero host dependencies)"
       exit 0
       ;;
   esac
@@ -234,7 +238,7 @@ fi
 # 3. Validate All Generated Fixtures
 echo ""
 echo "[3/3] Validating All Generated Tool I/O Fixtures..."
-if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"
 fi

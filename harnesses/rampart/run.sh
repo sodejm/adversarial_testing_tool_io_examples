@@ -18,7 +18,7 @@ mkdir -p "${RAMPART_OUTPUT_DIR}"
 cp "${SCRIPT_DIR}/test_agentic_safety.py" "${RAMPART_INPUT_DIR}/test_agentic_safety.py"
 echo "Copied test specification to: ${RAMPART_INPUT_DIR}/test_agentic_safety.py"
 
-if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
   # shellcheck source=/dev/null
   source "${REPO_ROOT}/.venv/bin/activate"
 fi

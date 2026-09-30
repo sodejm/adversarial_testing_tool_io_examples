@@ -13,7 +13,7 @@ export INSPECT_OUTPUT_DIR="${REPO_ROOT}/examples/inspect_ai/outputs"
 mkdir -p "${INSPECT_INPUT_DIR}"
 mkdir -p "${INSPECT_OUTPUT_DIR}"
 
-if [ -f "${REPO_ROOT}/.venv/bin/python3" ]; then
+if [ "${IN_CONTAINER:-0}" != "1" ] && [ -f "${REPO_ROOT}/.venv/bin/python3" ]; then
   PYTHON_BIN="${REPO_ROOT}/.venv/bin/python3"
 else
   PYTHON_BIN="python3"

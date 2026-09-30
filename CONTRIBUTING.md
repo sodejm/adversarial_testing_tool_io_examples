@@ -35,7 +35,15 @@ cd adversarial_testing_tool_io_examples
 git checkout -b feat/my-new-contribution
 ```
 
-### 3. Initialize Virtual Environments
+### 3. Initialize Environment
+
+#### Option A: Containerized Setup (Recommended - Zero Host Language Dependencies)
+If you have Docker installed, you can skip installing Python and Node.js on your machine:
+```bash
+./scripts/run_containerized.sh
+```
+
+#### Option B: Host Environment Setup
 ```bash
 # Python setup
 python3 -m venv .venv

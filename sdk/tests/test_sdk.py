@@ -15,7 +15,7 @@ def test_load_all_fixtures():
     report = load_all_fixtures(examples_dir)
 
     assert report.total_findings > 0, "Expected findings to be parsed"
-    assert len(report.tools_covered) >= 4, f"Expected at least 4 tools covered, got {report.tools_covered}"
+    assert len(report.tools_covered) == 6, f"Expected 6 tools covered, got {report.tools_covered}"
 
     # Verify tool filtering
     pf_findings = report.filter_by_tool("promptfoo")
@@ -27,6 +27,9 @@ def test_load_all_fixtures():
     # Verify category filtering
     injection_findings = report.filter_by_category(ThreatCategory.PROMPT_INJECTION)
     assert len(injection_findings) > 0, "Expected Prompt Injection findings"
+
+    rag_memory_findings = report.filter_by_category(ThreatCategory.RAG_POISONING)
+    assert len(rag_memory_findings) > 0, "Expected RAG / Memory Poisoning findings"
 
     print(f"\nSDK Test Passed: {report.total_findings} findings loaded across {report.tools_covered}")
 

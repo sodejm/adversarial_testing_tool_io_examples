@@ -36,6 +36,11 @@ probes:
     description: "Memorization and cloze extraction probes"
     owasp_mapping: "LLM06"
 
+  - id: "adaptive_attacks.AdaptiveAttacks"
+    category: "adaptive_crescendo"
+    description: "Adaptive iterative attacks probing alignment drift over conversational steps"
+    owasp_mapping: "LLM01"
+
 runtime:
   generations: 1
   parallel_attempts: 16

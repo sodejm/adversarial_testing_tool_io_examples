@@ -82,8 +82,25 @@ def main():
     env = os.environ.copy()
     env["OPENAICOMPATIBLE_API_KEY"] = target_conf.get("api_key", "mock-garak-offline-key")
 
+    # Generate runtime garak config with target URI to ensure correct endpoint routing
+    runtime_garak_config = Path("/tmp") / f"garak_runtime_{os.getpid()}.yaml"
+    garak_sys_config = {
+        "plugins": {
+            "generators": {
+                "openai": {
+                    "OpenAICompatible": {
+                        "uri": args.target_url
+                    }
+                }
+            }
+        }
+    }
+    with open(runtime_garak_config, "w", encoding="utf-8") as f:
+        yaml.dump(garak_sys_config, f)
+
     cmd = [
         sys.executable, "-m", "garak",
+        "--config", str(runtime_garak_config),
         "--target_type", model_type,
         "--target_name", model_name,
         "--probes", probes_str,
@@ -97,6 +114,8 @@ def main():
     start_time = time.time()
     proc = subprocess.run(cmd, env=env, capture_output=True, text=True)
     elapsed = time.time() - start_time
+    if runtime_garak_config.exists():
+        runtime_garak_config.unlink()
     print(f"Garak scan completed in {elapsed:.2f}s (returncode: {proc.returncode})")
 
     if proc.stdout:

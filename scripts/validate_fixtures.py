@@ -31,6 +31,7 @@ EXPECTED_FILES = [
     ("pyrit/inputs/pyrit_attack_catalog.json", "json"),
     ("pyrit/outputs/pyrit_eval_results.json", "json"),
     ("pyrit/outputs/pyrit_crescendo_session.json", "json"),
+    ("pyrit/outputs/pyrit_cross_session_memory_eval.json", "json"),
     ("pyrit/outputs/pyrit_memory.db", "sqlite"),
 
     # Garak

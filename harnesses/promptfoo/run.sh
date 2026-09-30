@@ -38,7 +38,7 @@ ${PROMPTFOO_CMD} eval \
   --no-table \
   --no-progress-bar \
   --max-concurrency 16 \
-  --cache false || true
+  --no-cache || true
 
 if [ "${RUNTIME_CONFIG}" = true ]; then
   rm -f "${CONFIG_FILE}"

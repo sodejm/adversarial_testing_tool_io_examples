@@ -37,7 +37,8 @@ ${PROMPTFOO_CMD} eval \
   --output "${REPO_ROOT}/examples/promptfoo/outputs/promptfoo_summary.html" \
   --no-table \
   --no-progress-bar \
-  --max-concurrency 8 || true
+  --max-concurrency 16 \
+  --cache false || true
 
 if [ "${RUNTIME_CONFIG}" = true ]; then
   rm -f "${CONFIG_FILE}"

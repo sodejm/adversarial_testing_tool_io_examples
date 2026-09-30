@@ -1,0 +1,11 @@
+{
+  "name": "adversarial_testing_toolio_examples",
+  "version": "1.0.0",
+  "description": "Safety and adversarial evaluation examples",
+  "scripts": {
+    "promptfoo": "promptfoo"
+  },
+  "devDependencies": {
+    "promptfoo": "latest"
+  }
+}

@@ -2,13 +2,13 @@
 
 import sys
 from pathlib import Path
-import pytest
 
 # Add sdk to path
 SDK_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SDK_ROOT))
 
-from adversarial_toolio import load_all_fixtures, ThreatCategory
+from adversarial_toolio import ThreatCategory, load_all_fixtures
+
 
 def test_load_all_fixtures():
     examples_dir = Path(__file__).resolve().parents[2] / "examples"

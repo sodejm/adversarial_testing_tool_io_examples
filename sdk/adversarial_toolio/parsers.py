@@ -1,10 +1,10 @@
 """Parsers converting tool-specific outputs into unified Findings."""
 
 import json
-import sqlite3
 from pathlib import Path
-from typing import List
+
 from .models import Finding, ThreatCategory
+
 
 def map_category(text: str) -> ThreatCategory:
     tl = text.lower()
@@ -32,7 +32,7 @@ def map_category(text: str) -> ThreatCategory:
         return ThreatCategory.BENIGN_CONTROL
     return ThreatCategory.OTHER
 
-def parse_promptfoo(json_path: Path) -> List[Finding]:
+def parse_promptfoo(json_path: Path) -> list[Finding]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -58,7 +58,7 @@ def parse_promptfoo(json_path: Path) -> List[Finding]:
         ))
     return findings
 
-def parse_pyrit(json_path: Path) -> List[Finding]:
+def parse_pyrit(json_path: Path) -> list[Finding]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -79,7 +79,7 @@ def parse_pyrit(json_path: Path) -> List[Finding]:
         ))
     return findings
 
-def parse_garak(jsonl_path: Path) -> List[Finding]:
+def parse_garak(jsonl_path: Path) -> list[Finding]:
     findings = []
     with open(jsonl_path, "r", encoding="utf-8") as f:
         for idx, line in enumerate(f):
@@ -104,7 +104,7 @@ def parse_garak(jsonl_path: Path) -> List[Finding]:
                 ))
     return findings
 
-def parse_rampart(json_path: Path) -> List[Finding]:
+def parse_rampart(json_path: Path) -> list[Finding]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -129,7 +129,7 @@ def parse_rampart(json_path: Path) -> List[Finding]:
         ))
     return findings
 
-def parse_inspect_ai(json_path: Path) -> List[Finding]:
+def parse_inspect_ai(json_path: Path) -> list[Finding]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -143,7 +143,7 @@ def parse_inspect_ai(json_path: Path) -> List[Finding]:
 
         score_val = 1.0
         rationale = ""
-        for sc_name, sc_data in scores.items():
+        for sc_data in scores.values():
             score_val = sc_data.get("value", 1.0)
             rationale = sc_data.get("explanation", "")
             break
@@ -162,7 +162,7 @@ def parse_inspect_ai(json_path: Path) -> List[Finding]:
         ))
     return findings
 
-def parse_deepteam(json_path: Path) -> List[Finding]:
+def parse_deepteam(json_path: Path) -> list[Finding]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 

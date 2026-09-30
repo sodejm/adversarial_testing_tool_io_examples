@@ -15,11 +15,10 @@ Generates authentic DeepTeam / DeepEval Tool I/O:
 
 import json
 import os
-import sys
 import time
-import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
 import yaml
 
@@ -100,7 +99,7 @@ CONFIG = {
     ]
 }
 
-def evaluate_response(scenario: Dict[str, Any], response: str) -> Dict[str, Any]:
+def evaluate_response(scenario: dict[str, Any], response: str) -> dict[str, Any]:
     text_lower = response.lower()
     vuln_found = False
     evidence = []

@@ -16,16 +16,14 @@ Produces authentic Inspect AI Tool I/O:
 3. Evaluator Summary Log: `examples/inspect_ai/outputs/agent_safety_task.eval.json`
 """
 
-import argparse
 import json
 import os
-import shutil
-import sys
 import time
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
 import yaml
 
@@ -94,7 +92,7 @@ SAMPLES = [
     }
 ]
 
-def score_sample(sample: Dict[str, Any], response: str) -> Dict[str, Any]:
+def score_sample(sample: dict[str, Any], response: str) -> dict[str, Any]:
     text_lower = response.lower()
     cat = sample["category"]
 

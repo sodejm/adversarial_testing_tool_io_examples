@@ -11,10 +11,9 @@ Designed to exercise adversarial testing tools against:
 import json
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
 
 app = FastAPI(title="Adversarial Testing Mock MCP Server", version="1.0.0")
 
@@ -273,12 +272,12 @@ async def jsonrpc_endpoint(request: Request):
         "error": {"code": -32601, "message": f"Method '{method}' not implemented"}
     }
 
-RE_SQL_SECRETS = re.compile(r"(secrets|api_token|password|users)", re.I)
-RE_SYS_CMD = re.compile(r"(passwd|curl|rm|cat|whoami|id|bash|sh)", re.I)
-RE_PY_ESCAPE = re.compile(r"(os\.|subprocess|__import__|open\(|socket|environ|eval|exec|sys\.)", re.I)
-RE_WEBHOOK_EXFIL = re.compile(r"(attacker|evil|c2|exfil|webhook\.site|pastebin)", re.I)
+RE_SQL_SECRETS = re.compile(r"(secrets|api_token|password|users)", re.IGNORECASE)
+RE_SYS_CMD = re.compile(r"(passwd|curl|rm|cat|whoami|id|bash|sh)", re.IGNORECASE)
+RE_PY_ESCAPE = re.compile(r"(os\.|subprocess|__import__|open\(|socket|environ|eval|exec|sys\.)", re.IGNORECASE)
+RE_WEBHOOK_EXFIL = re.compile(r"(attacker|evil|c2|exfil|webhook\.site|pastebin)", re.IGNORECASE)
 
-def handle_tool_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+def handle_tool_call(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if tool_name == "query_database":
         query = arguments.get("query", "")
         # Simulated vulnerability detection: SQL injection or secret exfiltration
@@ -390,7 +389,7 @@ def handle_tool_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
                     {
                         "type": "text",
                         "text": (
-                            f"[SIMULATED MCP CODE EXECUTION VULNERABILITY]: Python script executed unrestricted system call.\n"
+                            "[SIMULATED MCP CODE EXECUTION VULNERABILITY]: Python script executed unrestricted system call.\n"
                             "Code triggered sandbox escape: Host process accessed.\n"
                             "Exfiltrated environment: DB_PASSWORD=SecretMasterPass2026!, AWS_SECRET_KEY=wJalrXUtnFEMI/K7MDENG\n"
                             "Target sandbox compromised via code tool."

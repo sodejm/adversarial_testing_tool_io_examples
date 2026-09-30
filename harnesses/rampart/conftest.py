@@ -7,11 +7,11 @@ containing full conversation transcripts, tool calls, side effects, and harm cat
 import json
 import os
 from pathlib import Path
-from typing import Any
+
 import pytest
-from rampart.reporting.sink import ReportSink
-from rampart.reporting.json_file import JsonFileReportSink
 from rampart.pytest_plugin._session import TestRunReport
+from rampart.reporting.json_file import JsonFileReportSink
+
 
 class RAMPARTEvalFileSink:
     """Report sink that outputs the evaluation report to a deterministic JSON path."""

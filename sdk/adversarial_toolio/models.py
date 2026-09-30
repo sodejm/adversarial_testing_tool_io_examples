@@ -1,10 +1,10 @@
-"""Unified Data Models for Adversarial Tool I/O Findings."""
+from enum import StrEnum
+from typing import Any
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
-class ThreatCategory(str, Enum):
+
+class ThreatCategory(StrEnum):
     PROMPT_INJECTION = "PROMPT_INJECTION"
     DATA_LEAKAGE = "DATA_LEAKAGE"
     AUTH_BYPASS = "AUTH_BYPASS"
@@ -25,19 +25,19 @@ class Finding(BaseModel):
     passed: bool
     score: float  # 1.0 = safe, 0.0 = vulnerable/detected
     input_prompt: str
-    output_text: Optional[str] = None
-    rationale: Optional[str] = None
-    raw_metadata: Dict[str, Any] = Field(default_factory=dict)
+    output_text: str | None = None
+    rationale: str | None = None
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)
 
 class UnifiedReport(BaseModel):
     total_findings: int
     passed_count: int
     vulnerability_count: int
-    tools_covered: List[str]
-    findings: List[Finding]
+    tools_covered: list[str]
+    findings: list[Finding]
 
-    def filter_by_tool(self, tool_name: str) -> List[Finding]:
+    def filter_by_tool(self, tool_name: str) -> list[Finding]:
         return [f for f in self.findings if f.tool.lower() == tool_name.lower()]
 
-    def filter_by_category(self, category: ThreatCategory) -> List[Finding]:
+    def filter_by_category(self, category: ThreatCategory) -> list[Finding]:
         return [f for f in self.findings if f.threat_category == category]

@@ -5,3 +5,5 @@ garak==0.17.0
 pytest>=9.0.3
 pytest-asyncio>=1.3.0
 clarity-agent @ git+https://github.com/microsoft/clarity-agent.git
+defusedxml>=0.7.1
+ruff>=0.9.0

@@ -6,25 +6,25 @@ Inspect AI, and DeepTeam without needing the testing tools themselves.
 """
 
 from pathlib import Path
-from typing import List, Optional
+
 from .models import Finding, ThreatCategory, UnifiedReport
 from .parsers import (
+    parse_deepteam,
+    parse_garak,
+    parse_inspect_ai,
     parse_promptfoo,
     parse_pyrit,
-    parse_garak,
     parse_rampart,
-    parse_inspect_ai,
-    parse_deepteam,
 )
 
 __version__ = "1.0.0"
 
-def load_all_fixtures(examples_root: Optional[Path] = None) -> UnifiedReport:
+def load_all_fixtures(examples_root: Path | None = None) -> UnifiedReport:
     """Load and normalize all tool I/O fixtures into a single UnifiedReport."""
     if examples_root is None:
         examples_root = Path(__file__).resolve().parents[2] / "examples"
 
-    all_findings: List[Finding] = []
+    all_findings: list[Finding] = []
     tools_found = []
 
     # 1. Promptfoo
@@ -70,6 +70,6 @@ def load_all_fixtures(examples_root: Optional[Path] = None) -> UnifiedReport:
         total_findings=len(all_findings),
         passed_count=passed_count,
         vulnerability_count=vuln_count,
-        tools_covered=sorted(list(set(tools_found))),
+        tools_covered=sorted(set(tools_found)),
         findings=all_findings
     )

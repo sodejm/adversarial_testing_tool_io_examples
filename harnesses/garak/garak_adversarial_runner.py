@@ -16,14 +16,15 @@ Captures and stores authentic Tool I/O artifacts:
 """
 
 import argparse
-import glob
 import os
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+
 import yaml
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Garak adversarial evaluation against mock LLM API")
@@ -58,7 +59,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     input_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"=== Running Garak Adversarial Probing Runner ===")
+    print("=== Running Garak Adversarial Probing Runner ===")
     print(f"Target URL: {args.target_url}")
     print(f"Output Directory: {output_dir}")
 

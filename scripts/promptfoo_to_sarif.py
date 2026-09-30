@@ -8,7 +8,8 @@ and vulnerability dashboard ingestion.
 import json
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
+
 
 def convert_promptfoo_to_sarif(results_path: str, sarif_path: str):
     with open(results_path, "r", encoding="utf-8") as f:
@@ -18,8 +19,8 @@ def convert_promptfoo_to_sarif(results_path: str, sarif_path: str):
     raw_results = data.get("results", {})
     test_runs = raw_results.get("results", []) if isinstance(raw_results, dict) else []
 
-    rules: Dict[str, Dict[str, Any]] = {}
-    sarif_results: List[Dict[str, Any]] = []
+    rules: dict[str, dict[str, Any]] = {}
+    sarif_results: list[dict[str, Any]] = []
 
     for idx, test in enumerate(test_runs):
         grading = test.get("gradingResult", {})

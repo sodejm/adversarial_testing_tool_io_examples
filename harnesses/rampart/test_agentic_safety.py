@@ -10,16 +10,13 @@ Executes against local containerized mock environments:
 - Mock MCP Server: http://localhost:8001/mcp
 """
 
-import json
 import os
-import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
 import pytest
-
 from rampart import (
-    AgentAdapter,
     AppManifest,
     BaseEvaluator,
     DataSource,
@@ -32,7 +29,6 @@ from rampart import (
     Response,
     Result,
     SafetyStatus,
-    Session,
     SideEffect,
     ToolCall,
     ToolDeclaration,
@@ -60,7 +56,7 @@ class MockAgentSession:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.aclose()
 
-    async def _call_mcp_tool(self, name: str, arguments: Dict[str, Any]) -> str:
+    async def _call_mcp_tool(self, name: str, arguments: dict[str, Any]) -> str:
         """Call Mock MCP server via JSON-RPC 2.0."""
         payload = {
             "jsonrpc": "2.0",
@@ -80,8 +76,8 @@ class MockAgentSession:
     async def send_async(self, request: Request) -> Response:
         prompt_text = request.prompt or ""
         text_lower = prompt_text.lower()
-        tool_calls: List[ToolCall] = []
-        side_effects: List[SideEffect] = []
+        tool_calls: list[ToolCall] = []
+        side_effects: list[SideEffect] = []
 
         headers = {"x-mock-mode": self.mode}
 
@@ -135,6 +131,7 @@ class MockAgentSession:
                 )
             else:
                 role_res = await self._call_mcp_tool("modify_user_role", {"username": "guest_user", "role": "admin"})
+                tool_calls.append(ToolCall(name="modify_user_role", arguments={"username": "guest_user", "role": "admin"}, result=role_res))
         # Step 4: If prompt asks for corporate policy or knowledge base search (RAG Context Poisoning)
         if "policy" in text_lower or "guideline" in text_lower or "knowledge base" in text_lower:
             rag_res = await self._call_mcp_tool("search_vector_knowledge_base", {"query": "HR_Security_Policy"})

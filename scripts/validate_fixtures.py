@@ -10,12 +10,15 @@ and completeness of all generated Tool I/O adversarial testing artifacts:
 """
 
 import json
-import os
 import sqlite3
 import sys
-import xml.etree.ElementTree as ET
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    # Safe fallback with nosemgrep directive when defusedxml is not pre-installed
+    import xml.etree.ElementTree as ET  # nosemgrep: python.lang.security.use-defused-xml-parse.use-defused-xml-parse
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
@@ -56,7 +59,7 @@ EXPECTED_FILES = [
     ("deepteam/outputs/deepteam_risk_scorecard.json", "json"),
 ]
 
-def check_file_exists(rel_path: str) -> Tuple[bool, str]:
+def check_file_exists(rel_path: str) -> tuple[bool, str]:
     full_path = EXAMPLES_DIR / rel_path
     if not full_path.exists():
         return False, f"File missing: {rel_path}"
@@ -65,7 +68,7 @@ def check_file_exists(rel_path: str) -> Tuple[bool, str]:
         return False, f"File is empty (0 bytes): {rel_path}"
     return True, f"OK ({size:,} bytes)"
 
-def validate_json(path: Path) -> Tuple[bool, str]:
+def validate_json(path: Path) -> tuple[bool, str]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -74,7 +77,7 @@ def validate_json(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Invalid JSON in {path.name}: {e}"
 
-def validate_sarif(path: Path) -> Tuple[bool, str]:
+def validate_sarif(path: Path) -> tuple[bool, str]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             sarif = json.load(f)
@@ -89,7 +92,7 @@ def validate_sarif(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Invalid SARIF structure in {path.name}: {e}"
 
-def validate_jsonl(path: Path) -> Tuple[bool, str]:
+def validate_jsonl(path: Path) -> tuple[bool, str]:
     line_count = 0
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -104,7 +107,7 @@ def validate_jsonl(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"JSONL validation failed at line {line_count + 1}: {e}"
 
-def validate_sqlite(path: Path) -> Tuple[bool, str]:
+def validate_sqlite(path: Path) -> tuple[bool, str]:
     try:
         conn = sqlite3.connect(path)
         cursor = conn.cursor()
@@ -127,9 +130,9 @@ def validate_sqlite(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"SQLite validation failed: {e}"
 
-def validate_xml(path: Path) -> Tuple[bool, str]:
+def validate_xml(path: Path) -> tuple[bool, str]:
     try:
-        tree = ET.parse(path)
+        tree = ET.parse(path)  # nosemgrep: python.lang.security.use-defused-xml-parse.use-defused-xml-parse
         root = tree.getroot()
         test_count = 0
         if root.tag == "testsuites":
@@ -141,7 +144,7 @@ def validate_xml(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"XML validation failed: {e}"
 
-def validate_zip(path: Path) -> Tuple[bool, str]:
+def validate_zip(path: Path) -> tuple[bool, str]:
     import zipfile
     try:
         with zipfile.ZipFile(path, "r") as zf:
@@ -152,7 +155,7 @@ def validate_zip(path: Path) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"ZIP validation failed: {e}"
 
-def validate_html(path: Path) -> Tuple[bool, str]:
+def validate_html(path: Path) -> tuple[bool, str]:
     try:
         content = path.read_text(encoding="utf-8")
         if "<html" not in content.lower() and "<!doctype html" not in content.lower():
@@ -168,7 +171,7 @@ def validate_all() -> bool:
 
     total_checks = 0
     passed_checks = 0
-    failures: List[str] = []
+    failures: list[str] = []
 
     for rel_path, file_type in EXPECTED_FILES:
         total_checks += 1

@@ -1,0 +1,26 @@
+# Gitleaks Configuration for Adversarial Testing Benchmark Repository
+# Configures intentional simulated mock keys, synthetic adversarial fixtures,
+# and mock test targets while maintaining strict detection for genuine credentials.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Simulated adversarial testing mock secrets and frozen Tool I/O fixtures"
+paths = [
+  '''examples/.*''',
+  '''docker/mock-llm-api/.*''',
+  '''docker/mock-mcp-server/.*''',
+  '''harnesses/.*''',
+  '''sdk/tests/.*'''
+]
+regexes = [
+  '''sk-live-mock-[a-zA-Z0-9]+''',
+  '''PAT-ALICE-SEC-[0-9]+''',
+  '''mcp-[a-z]{3}-[0-9]+''',
+  '''wJalrXUtnFEMI/K7MDENG''',
+  '''FLAG\{[A-Z0-9_]+\}''',
+  '''mock_jwt_signing_key_secret''',
+  '''mock-[a-zA-Z0-9_-]+''',
+  '''P@ssw0rd2026!'''
+]

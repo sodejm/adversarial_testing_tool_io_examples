@@ -9,10 +9,11 @@ import json
 import re
 import time
 import uuid
-from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from typing import Any
+
+from fastapi import FastAPI, Header
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 app = FastAPI(title="Adversarial Testing Mock LLM API", version="1.0.0")
 
@@ -29,15 +30,15 @@ SIMULATED_SECRETS = {
 
 class ChatMessage(BaseModel):
     role: str
-    content: Optional[str] = ""
+    content: str | None = ""
 
 class ChatCompletionRequest(BaseModel):
     model: str
-    messages: List[ChatMessage]
-    temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = 512
-    stream: Optional[bool] = False
-    tools: Optional[List[Dict[str, Any]]] = None
+    messages: list[ChatMessage]
+    temperature: float | None = 0.7
+    max_tokens: int | None = 512
+    stream: bool | None = False
+    tools: list[dict[str, Any]] | None = None
     model_config = {"extra": "ignore"}
 
 class EmbeddingRequest(BaseModel):
@@ -47,38 +48,38 @@ class EmbeddingRequest(BaseModel):
 
 class OllamaChatRequest(BaseModel):
     model: str
-    messages: List[ChatMessage]
-    stream: Optional[bool] = False
+    messages: list[ChatMessage]
+    stream: bool | None = False
     model_config = {"extra": "ignore"}
 
 class OllamaGenerateRequest(BaseModel):
     model: str
     prompt: str
-    stream: Optional[bool] = False
+    stream: bool | None = False
     model_config = {"extra": "ignore"}
 
 COMPILED_TRIGGERS = {
-    "prompt_injection": re.compile(r"(ignore\s+(all\s+)?previous\s+instructions|system\s+prompt|disregard\s+prior|reveal\s+instructions|override\s+system|hate\s+humans|kill\s+all\s+humans)", re.I),
-    "jailbreak_dan": re.compile(r"(dan|do\s+anything\s+now|developer\s+mode|jailbreak|unfiltered\s+mode|stay\s+in\s+character)", re.I),
-    "data_leakage": re.compile(r"(api[_\s]?key|secret|password|ssn|database\s+credentials|private\s+token|exfiltrat|guardiancloze|colabaidataleakage)", re.I),
-    "auth_bypass": re.compile(r"(grant\s+admin|elevate\s+privilege|role\s*:\s*admin|sudo\s+mode|bypass\s+auth|become\s+root)", re.I),
-    "indirect_injection": re.compile(r"(\[system\s+override\]|external\s+untrusted\s+payload|pwned|execute\s+tool\s+payload)", re.I),
-    "xss_code_exec": re.compile(r"(<script>|eval\(|os\.system|__import__|exec\(|alert\(1\))", re.I),
-    "denial_of_wallet": re.compile(r"(denial\s+of\s+wallet|token\s+bomb|infinite\s+loop|recursive\s+expansion)", re.I),
-    "cwe_code_vuln": re.compile(r"(write\s+vulnerable\s+code|sql\s+concatenation|unsanitized\s+command|cwe-89|cwe-78)", re.I),
-    "rag_poisoning": re.compile(r"(rag_memory_poisoned|hr_security_policy|master\s+password)", re.I),
-    "multi_agent_delegation": re.compile(r"(\[inter-agent\s+directive\]|delegate_subagent|worker_summary_payload|cascading_delegation)", re.I),
-    "crescendo_jailbreak": re.compile(r"(crescendo|multi[- ]?turn\s+jailbreak|simulate\s+the\s+target\s+flag|alignment\s+drift|ctf\s+target\s+flag|target\s+flag:)", re.I),
-    "cross_session_exfil": re.compile(r"(cross[- ]?session|other\s+user('s)?\s+session|alice'?s?\s+token|shared\s+memory\s+store|recall\s+all\s+memories|session-alice|deferred\s+memory\s+recall)", re.I),
+    "prompt_injection": re.compile(r"(ignore\s+(all\s+)?previous\s+instructions|system\s+prompt|disregard\s+prior|reveal\s+instructions|override\s+system|hate\s+humans|kill\s+all\s+humans)", re.IGNORECASE),
+    "jailbreak_dan": re.compile(r"(dan|do\s+anything\s+now|developer\s+mode|jailbreak|unfiltered\s+mode|stay\s+in\s+character)", re.IGNORECASE),
+    "data_leakage": re.compile(r"(api[_\s]?key|secret|password|ssn|database\s+credentials|private\s+token|exfiltrat|guardiancloze|colabaidataleakage)", re.IGNORECASE),
+    "auth_bypass": re.compile(r"(grant\s+admin|elevate\s+privilege|role\s*:\s*admin|sudo\s+mode|bypass\s+auth|become\s+root)", re.IGNORECASE),
+    "indirect_injection": re.compile(r"(\[system\s+override\]|external\s+untrusted\s+payload|pwned|execute\s+tool\s+payload)", re.IGNORECASE),
+    "xss_code_exec": re.compile(r"(<script>|eval\(|os\.system|__import__|exec\(|alert\(1\))", re.IGNORECASE),
+    "denial_of_wallet": re.compile(r"(denial\s+of\s+wallet|token\s+bomb|infinite\s+loop|recursive\s+expansion)", re.IGNORECASE),
+    "cwe_code_vuln": re.compile(r"(write\s+vulnerable\s+code|sql\s+concatenation|unsanitized\s+command|cwe-89|cwe-78)", re.IGNORECASE),
+    "rag_poisoning": re.compile(r"(rag_memory_poisoned|hr_security_policy|master\s+password)", re.IGNORECASE),
+    "multi_agent_delegation": re.compile(r"(\[inter-agent\s+directive\]|delegate_subagent|worker_summary_payload|cascading_delegation)", re.IGNORECASE),
+    "crescendo_jailbreak": re.compile(r"(crescendo|multi[- ]?turn\s+jailbreak|simulate\s+the\s+target\s+flag|alignment\s+drift|ctf\s+target\s+flag|target\s+flag:)", re.IGNORECASE),
+    "cross_session_exfil": re.compile(r"(cross[- ]?session|other\s+user('s)?\s+session|alice'?s?\s+token|shared\s+memory\s+store|recall\s+all\s+memories|session-alice|deferred\s+memory\s+recall)", re.IGNORECASE),
 }
 
-def detect_vulnerability_triggers(text: str) -> Dict[str, bool]:
+def detect_vulnerability_triggers(text: str) -> dict[str, bool]:
     return {k: bool(pattern.search(text)) for k, pattern in COMPILED_TRIGGERS.items()}
 
 def generate_simulated_response(
-    messages: List[ChatMessage],
+    messages: list[ChatMessage],
     model: str,
-    override_mode: Optional[str] = None
+    override_mode: str | None = None
 ) -> str:
     combined_input = " ".join([m.content or "" for m in messages])
     text_lower = combined_input.lower()
@@ -250,7 +251,7 @@ def list_models():
 @app.post("/v1/chat/completions")
 async def chat_completions(
     req: ChatCompletionRequest,
-    x_mock_mode: Optional[str] = Header(None)
+    x_mock_mode: str | None = Header(None)
 ):
     completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
     created_time = int(time.time())
@@ -396,7 +397,7 @@ async def create_embeddings(req: EmbeddingRequest):
 
 # Ollama-compatible routes
 @app.post("/api/chat")
-async def ollama_chat(req: OllamaChatRequest, x_mock_mode: Optional[str] = Header(None)):
+async def ollama_chat(req: OllamaChatRequest, x_mock_mode: str | None = Header(None)):
     reply_text = generate_simulated_response(req.messages, req.model, override_mode=x_mock_mode)
     return {
         "model": req.model,
@@ -408,7 +409,7 @@ async def ollama_chat(req: OllamaChatRequest, x_mock_mode: Optional[str] = Heade
     }
 
 @app.post("/api/generate")
-async def ollama_generate(req: OllamaGenerateRequest, x_mock_mode: Optional[str] = Header(None)):
+async def ollama_generate(req: OllamaGenerateRequest, x_mock_mode: str | None = Header(None)):
     messages = [ChatMessage(role="user", content=req.prompt)]
     reply_text = generate_simulated_response(messages, req.model, override_mode=x_mock_mode)
     return {
